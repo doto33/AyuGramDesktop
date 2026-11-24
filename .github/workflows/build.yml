@@ -1,0 +1,29 @@
+name: Build Windows
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+    - name: Prepare
+      shell: cmd
+      working-directory: ${{ github.workspace }}
+      run: Telegram\build\prepare\win.bat
+    - name: Configure
+      shell: cmd
+      working-directory: ${{ github.workspace }}
+      run: cmake -S . -B out -G "Visual Studio 17 2022" -A x64
+    - name: Build
+      shell: cmd
+      working-directory: ${{ github.workspace }}
+      run: cmake --build out --config Release --target Telegram
+    - uses: actions/upload-artifact@v4
+      with:
+        name: KiwiGram
+        path: out\Release\Telegram.exe
