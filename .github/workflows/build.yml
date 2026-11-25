@@ -1,8 +1,6 @@
 name: Build Windows
-
 on:
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: windows-2022
@@ -53,16 +51,63 @@ jobs:
         timeout-minutes: 120
         run: cmake --build out --config Release --target Telegram --parallel 2
 
-      - name: Package artifact
+      - name: Diagnose
+        if: always()
         shell: cmd
         working-directory: ${{ github.workspace }}
         run: |
-          if not exist out\Release\Telegram.exe (
-            echo Telegram.exe not found!
-            exit /b 1
-          )
-          mkdir artifact
-          xcopy out\Release\* artifact\ /E /I /Y
+          echo === All EXE files under out\ ===
+          dir /s /b out\*.exe 2>nul || echo NO EXE FILES FOUND
+          echo.
+          echo === Contents of out\Release\ ===
+          dir out\Release\ 2>nul || echo out\Release\ DOES NOT EXIST
+          echo.
+          echo === Subdirs of out\ ===
+          dir /ad /b out\ 2>nul || echo out\ DOES NOT EXIST
+
+      - name: Package artifact
+        shell: pwsh
+        working-directory: ${{ github.workspace }}
+        run: |
+          # Рекурсивный поиск exe по всему out\
+          $mainExe = Get-ChildItem -Path "out" -Recurse -File |
+            Where-Object { $_.Name -eq "Telegram.exe" -or $_.Name -eq "AyuGram.exe" } |
+            Select-Object -First 1
+
+          if (-not $mainExe) {
+            Write-Host "ERROR: Telegram.exe / AyuGram.exe not found anywhere under out\"
+            Write-Host "All EXE files found:"
+            Get-ChildItem -Path "out" -Recurse -File -Filter "*.exe" |
+              ForEach-Object { Write-Host "  $($_.FullName)" }
+            exit 1
+          }
+
+          Write-Host "Found: $($mainExe.FullName)"
+
+          # Копируем из папки где лежит exe
+          # (там же Qt-плагины, DLL, ресурсы — стандарт tdesktop)
+          $srcDir = $mainExe.DirectoryName
+          Write-Host "Source dir: $srcDir"
+
+          New-Item -ItemType Directory -Force -Path "artifact" | Out-Null
+          Copy-Item -Path "$srcDir\*" -Destination "artifact" -Recurse -Force
+
+          # Финальная проверка — рекурсивно
+          $check = Get-ChildItem -Path "artifact" -Recurse -File |
+            Where-Object { $_.Name -eq "Telegram.exe" -or $_.Name -eq "AyuGram.exe" } |
+            Select-Object -First 1
+
+          if (-not $check) {
+            Write-Host "ERROR: EXE missing in artifact after copy"
+            exit 1
+          }
+
+          $totalFiles = (Get-ChildItem -Path "artifact" -Recurse -File).Count
+          $totalDlls  = (Get-ChildItem -Path "artifact" -Recurse -File -Filter "*.dll").Count
+
+          Write-Host "SUCCESS: $($check.Name)"
+          Write-Host "Total files : $totalFiles"
+          Write-Host "DLL files   : $totalDlls"
 
       - uses: actions/upload-artifact@v4
         with:
