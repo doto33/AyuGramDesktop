@@ -6,10 +6,12 @@ on:
 jobs:
   build:
     runs-on: windows-2022
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 1
 
       - uses: ilammy/msvc-dev-cmd@v1
         with:
@@ -20,27 +22,50 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ..\Libraries
-            ..\ThirdParty
-          key: win64-deps-${{ hashFiles('Telegram/build/prepare/prepare.py') }}
+            ${{ github.workspace }}\..\Libraries
+            ${{ github.workspace }}\..\ThirdParty
+          key: win64-deps-windows-2022-x64-qt5.15.19-${{ hashFiles('Telegram/build/prepare/prepare.py', 'Telegram/build/prepare/win.bat') }}
 
       - name: Prepare
         if: steps.cache-deps.outputs.cache-hit != 'true'
         shell: cmd
         working-directory: ${{ github.workspace }}
-        run: Telegram\build\prepare\win.bat
+        timeout-minutes: 240
+        run: |
+          call Telegram\build\prepare\win.bat
+          if errorlevel 1 (
+            echo Prepare failed!
+            exit /b 1
+          )
 
       - name: Configure
         shell: cmd
         working-directory: ${{ github.workspace }}\Telegram
-        run: configure.bat x64 -DTDESKTOP_API_ID=2040 -DTDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 -DDESKTOP_APP_DISABLE_CRASH_REPORTS=ON
+        run: >
+          call configure.bat x64
+          -D TDESKTOP_API_ID=2040
+          -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627
+          -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON
 
       - name: Build
         shell: cmd
         working-directory: ${{ github.workspace }}
-        run: cmake --build out --config Release --target Telegram --parallel
+        timeout-minutes: 120
+        run: cmake --build out --config Release --target Telegram --parallel 2
+
+      - name: Package artifact
+        shell: cmd
+        working-directory: ${{ github.workspace }}
+        run: |
+          if not exist out\Release\Telegram.exe (
+            echo Telegram.exe not found!
+            exit /b 1
+          )
+          mkdir artifact
+          xcopy out\Release\* artifact\ /E /I /Y
 
       - uses: actions/upload-artifact@v4
         with:
           name: KiwiGram
-          path: out\Release\Telegram.exe
+          path: artifact\
+          if-no-files-found: error
