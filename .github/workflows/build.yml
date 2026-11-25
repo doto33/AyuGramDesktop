@@ -29,15 +29,11 @@ jobs:
     - name: Configure
       shell: cmd
       working-directory: ${{ github.workspace }}
-      env:
-        QT: D:\a\AyuGramDesktop\Libraries\win64\qt_5.15.19\qtbase
-      run: cmake -S . -B out -G "Visual Studio 17 2022" -A x64
+      run: cmake -S . -B out -G "Visual Studio 17 2022" -A x64 -DQT_VER=5.15.19 -DCMAKE_PREFIX_PATH=D:\a\AyuGramDesktop\Libraries\win64\Qt-5.15.19
 
     - name: Build
       shell: cmd
       working-directory: ${{ github.workspace }}
-      env:
-        QT: D:\a\AyuGramDesktop\Libraries\win64\qt_5.15.19\qtbase
       run: cmake --build out --config Release --target Telegram
 
     - uses: actions/upload-artifact@v4
