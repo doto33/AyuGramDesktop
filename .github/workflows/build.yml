@@ -26,24 +26,18 @@ jobs:
       working-directory: ${{ github.workspace }}
       run: Telegram\build\prepare\win.bat
 
-    - name: Find Qt
-      shell: cmd
-      run: |
-        echo === Libraries/win64 ===
-        dir D:\a\AyuGramDesktop\Libraries\win64 /b
-        echo === workspace parent ===
-        dir ${{ github.workspace }}\..\Libraries\win64 /b
-
     - name: Configure
       shell: cmd
       working-directory: ${{ github.workspace }}
       env:
-        QT: ${{ github.workspace }}\..\Libraries\win64\qt_5.15.19\qtbase
+        QT: D:\a\AyuGramDesktop\Libraries\win64\qt_5.15.19\qtbase
       run: cmake -S . -B out -G "Visual Studio 17 2022" -A x64
 
     - name: Build
       shell: cmd
       working-directory: ${{ github.workspace }}
+      env:
+        QT: D:\a\AyuGramDesktop\Libraries\win64\qt_5.15.19\qtbase
       run: cmake --build out --config Release --target Telegram
 
     - uses: actions/upload-artifact@v4
