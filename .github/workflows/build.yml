@@ -10,8 +10,8 @@ jobs:
       - name: Configure Pagefile
         uses: al-cheb/configure-pagefile-action@v1.4
         with:
-          minimum-size: 16GB
-          maximum-size: 24GB
+          minimum-size: 20GB
+          maximum-size: 32GB
 
       - uses: actions/checkout@v4
         with:
@@ -66,7 +66,9 @@ jobs:
         shell: cmd
         working-directory: ${{ github.workspace }}
         timeout-minutes: 340
-        run: cmake --build out --config Release --target Telegram --parallel 2 -- /p:PreferredToolArchitecture=x64 /p:TrackFileAccess=false /p:RunCodeAnalysis=false
+        env:
+          CL: /MP1 /Zm200
+        run: cmake --build out --config Release --target Telegram --parallel 1 -- /p:PreferredToolArchitecture=x64 /p:TrackFileAccess=false /p:RunCodeAnalysis=false /m:1
 
       - name: Diagnose
         if: always()
