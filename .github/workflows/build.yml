@@ -7,6 +7,12 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 360
     steps:
+      - name: Configure Pagefile
+        uses: al-cheb/configure-pagefile-action@v1.4
+        with:
+          minimum-size: 16GB
+          maximum-size: 24GB
+
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -69,7 +75,7 @@ jobs:
         shell: cmd
         working-directory: ${{ github.workspace }}
         timeout-minutes: 340
-        run: cmake --build out --config Release --target Telegram --parallel 2 -- /p:TrackFileAccess=false /p:RunCodeAnalysis=false /p:CL_MPCount=2
+        run: cmake --build out --config Release --target Telegram --parallel 1 -- /p:PreferredToolArchitecture=x64 /p:TrackFileAccess=false /p:RunCodeAnalysis=false /p:CL_MPCount=1
 
       - name: Save Build Cache
         if: always()
