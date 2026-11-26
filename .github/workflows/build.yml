@@ -29,7 +29,7 @@ jobs:
           path: |
             ${{ github.workspace }}\..\Libraries
             ${{ github.workspace }}\..\ThirdParty
-          key: win64-deps-windows-2022-x64-${{ hashFiles('Telegram/build/prepare/prepare.py', 'Telegram/build/prepare/win.bat') }}
+          key: win64-deps-windows-2022-x64-qt5.15.19-${{ hashFiles('Telegram/build/prepare/prepare.py', 'Telegram/build/prepare/win.bat') }}
 
       - name: Prepare
         if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -50,16 +50,7 @@ jobs:
           path: |
             ${{ github.workspace }}\..\Libraries
             ${{ github.workspace }}\..\ThirdParty
-          key: win64-deps-windows-2022-x64-${{ hashFiles('Telegram/build/prepare/prepare.py', 'Telegram/build/prepare/win.bat') }}
-
-      - name: Restore Build Cache
-        id: cache-build
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ github.workspace }}\out
-          key: win64-build-${{ github.sha }}
-          restore-keys: |
-            win64-build-
+          key: win64-deps-windows-2022-x64-qt5.15.19-${{ hashFiles('Telegram/build/prepare/prepare.py', 'Telegram/build/prepare/win.bat') }}
 
       - name: Configure
         shell: cmd
@@ -75,14 +66,7 @@ jobs:
         shell: cmd
         working-directory: ${{ github.workspace }}
         timeout-minutes: 340
-        run: cmake --build out --config Release --target Telegram --parallel 1 -- /p:PreferredToolArchitecture=x64 /p:TrackFileAccess=false /p:RunCodeAnalysis=false /p:CL_MPCount=1
-
-      - name: Save Build Cache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ github.workspace }}\out
-          key: win64-build-${{ github.sha }}
+        run: cmake --build out --config Release --target Telegram --parallel 2 -- /p:PreferredToolArchitecture=x64 /p:TrackFileAccess=false /p:RunCodeAnalysis=false
 
       - name: Diagnose
         if: always()
