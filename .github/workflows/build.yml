@@ -1,10 +1,11 @@
 name: Build Windows
 on:
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: windows-2022
-    timeout-minutes: 300
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
         with:
@@ -15,14 +16,14 @@ jobs:
         with:
           arch: x64
 
-      - name: Cache Libraries & ThirdParty
+      - name: Restore Libraries & ThirdParty Cache
         id: cache-deps
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             ${{ github.workspace }}\..\Libraries
             ${{ github.workspace }}\..\ThirdParty
-          key: win64-deps-windows-2022-x64-qt5.15.19-${{ hashFiles('Telegram/build/prepare/prepare.py', 'Telegram/build/prepare/win.bat') }}
+          key: win64-deps-windows-2022-x64-${{ hashFiles('Telegram/build/prepare/prepare.py', 'Telegram/build/prepare/win.bat') }}
 
       - name: Prepare
         if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -36,6 +37,24 @@ jobs:
             exit /b 1
           )
 
+      - name: Save Libraries & ThirdParty Cache
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ github.workspace }}\..\Libraries
+            ${{ github.workspace }}\..\ThirdParty
+          key: win64-deps-windows-2022-x64-${{ hashFiles('Telegram/build/prepare/prepare.py', 'Telegram/build/prepare/win.bat') }}
+
+      - name: Restore Build Cache
+        id: cache-build
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}\out
+          key: win64-build-${{ github.sha }}
+          restore-keys: |
+            win64-build-
+
       - name: Configure
         shell: cmd
         working-directory: ${{ github.workspace }}\Telegram
@@ -44,12 +63,20 @@ jobs:
           -D TDESKTOP_API_ID=2040
           -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627
           -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON
+          -D DESKTOP_APP_LTCG=OFF
 
       - name: Build
         shell: cmd
         working-directory: ${{ github.workspace }}
-        timeout-minutes: 120
-        run: cmake --build out --config Release --target Telegram --parallel 2 -- /p:TrackFileAccess=false /p:RunCodeAnalysis=false
+        timeout-minutes: 340
+        run: cmake --build out --config Release --target Telegram --parallel 2 -- /p:TrackFileAccess=false /p:RunCodeAnalysis=false /p:CL_MPCount=2
+
+      - name: Save Build Cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}\out
+          key: win64-build-${{ github.sha }}
 
       - name: Diagnose
         if: always()
